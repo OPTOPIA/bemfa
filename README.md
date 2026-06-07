@@ -53,4 +53,4 @@
     A: 目前没有太好的方案，一个可行的方案是注册2个巴法云账号，分别配置不同的插件实体进行同步，然后将2个账号分别绑定到小爱同学和天猫精灵。
 
 ## 原作者
-原始项目来自 [larry-wong/bemfa](https://github.com/larry-wong/bemfa)，这里保留链接以表达尊重。
+原始项目来自 [larry-wong/bemfa](https://github.com/larry-wong/bemfa)。
