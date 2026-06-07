@@ -32,6 +32,7 @@ _LOGGER = logging.getLogger(__name__)
 OPTIONS_SCOPE_ALL = "all"
 OPTIONS_SCOPE_AREA_PREFIX = "area:"
 OPTIONS_SCOPE_DEVICE_PREFIX = "device:"
+OPTIONS_BACK = "__back__"
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
@@ -150,6 +151,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     ) -> FlowResult:
         """Select an entity to create a hass-to-bemfa sync."""
         if user_input is not None:
+            if user_input[OPTIONS_SELECT] == OPTIONS_BACK:
+                return self._async_show_scope_form("create_sync")
             self._sync = self._sync_dict[user_input[OPTIONS_SELECT]]
             return await self._async_step_sync_config()
 
@@ -180,19 +183,29 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         if not bool(syncs):
             return self.async_show_form(step_id="empty", last_step=False)
 
+        entity_options = [
+            SelectOptionDict(
+                value=OPTIONS_BACK,
+                label="↩ 返回上一步",
+            )
+        ]
+        entity_options.extend(
+            [
+                SelectOptionDict(
+                    value=sync.entity_id,
+                    label=sync.generate_option_label(),
+                )
+                for sync in syncs
+            ]
+        )
+
         return self.async_show_form(
             step_id=step_id,
             data_schema=vol.Schema(
                 {
                     vol.Required(OPTIONS_SELECT): SelectSelector(
                         SelectSelectorConfig(
-                            options=[
-                                SelectOptionDict(
-                                    value=sync.entity_id,
-                                    label=sync.generate_option_label(),
-                                )
-                                for sync in syncs
-                            ],
+                            options=entity_options,
                             mode=SelectSelectorMode.DROPDOWN,
                         )
                     )
@@ -230,6 +243,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     ) -> FlowResult:
         """Select a sync to modify."""
         if user_input is not None:
+            if user_input[OPTIONS_SELECT] == OPTIONS_BACK:
+                return self._async_show_scope_form("modify_sync")
             self._sync = self._sync_dict[user_input[OPTIONS_SELECT]]
             return await self._async_step_sync_config()
 
