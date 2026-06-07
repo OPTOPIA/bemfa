@@ -3,13 +3,10 @@
 ## 维护说明
 本仓库是在原项目基础上继续维护的版本，会持续跟进较新 Home Assistant 版本的兼容性和功能调整。
 
-## 修复
-修复高版本HA的mqtt版本不兼容导致的bemfa插件失效问题 25/09/10
-修复参考（https://bbs.hassbian.com/thread-29794-1-1.html）帖子和评论
-
-修复core 2025.11.0  CAMERA_DOMAIN不兼容的问题
-新增 button 类实体同步支持
-优化同步实体选择流程，先按设备/区域筛选，再选择实体，减少大列表操作成本
+## 更新内容
+1. 新增 `button` 类实体同步支持。
+2. 优化同步实体选择流程，先按设备/区域筛选，再选择实体，减少大列表操作成本。
+3. 增强配置向导文案，帮助快速定位可同步实体。
 
 ## 功能
 将 Home Assistant 实体同步至巴法云，并使用小爱同学/天猫精灵/小度音箱控制。
@@ -55,7 +52,5 @@
 
     A: 目前没有太好的方案，一个可行的方案是注册2个巴法云账号，分别配置不同的插件实体进行同步，然后将2个账号分别绑定到小爱同学和天猫精灵。
 
-## 捐赠
-如果此项目对你有帮助，可以扫描下方二维码请我喝杯咖啡 :)
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <img src="donate/wechat.png" width="200" title="使用微信扫一扫" /> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <img src="donate/alipay.png" width="200" title="使用支付宝扫一扫" />
+## 原作者
+原始项目来自 [larry-wong/bemfa](https://github.com/larry-wong/bemfa)，这里保留链接以表达尊重。
