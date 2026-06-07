@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Callable
 from typing import Any
 from homeassistant.components.automation import DOMAIN as AUTOMATION_DOMAIN
+from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
 from homeassistant.components.camera import DOMAIN as CAMERA_DOMAIN
 from homeassistant.components.camera.const import CameraState
 from homeassistant.components.group import DOMAIN as GROUP_DOMAIN
@@ -166,6 +167,44 @@ class Scene(Switch):
         self,
     ) -> Callable[[str, ReadOnlyDict[Mapping[str, Any]]], str | int]:
         return lambda state, attributes: MSG_OFF
+
+
+@SYNC_TYPES.register("button")
+class Button(Switch):
+    """Treat HA button entities as momentary bemfa switch devices."""
+
+    @staticmethod
+    def _supported_domain() -> str:
+        return BUTTON_DOMAIN
+
+    def _msg_generator(
+        self,
+    ) -> Callable[[str, ReadOnlyDict[Mapping[str, Any]]], str | int]:
+        return lambda state, attributes: MSG_OFF
+
+    def _msg_resolvers(
+        self,
+    ) -> list[
+        (
+            int,
+            int,
+            Callable[
+                [list[str | int], ReadOnlyDict[Mapping[str, Any]]],
+                (str, str, dict[str, Any]),
+            ],
+        )
+    ]:
+        return [
+            (
+                0,
+                1,
+                lambda msg, attributes: (
+                    BUTTON_DOMAIN,
+                    SERVICE_PRESS,
+                    {},
+                ),
+            )
+        ]
 
 
 @SYNC_TYPES.register("group")
