@@ -10,6 +10,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers import area_registry, device_registry, entity_registry
 from homeassistant.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
@@ -27,6 +28,10 @@ from .const import (
 from .service import BemfaService
 
 _LOGGER = logging.getLogger(__name__)
+
+OPTIONS_SCOPE_ALL = "all"
+OPTIONS_SCOPE_AREA_PREFIX = "area:"
+OPTIONS_SCOPE_DEVICE_PREFIX = "device:"
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
@@ -92,6 +97,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     # current sync we are creating or modifu
     _sync: Sync
 
+    # current scope to filter selectable syncs
+    _scope: str
+
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         self._entry_id = config_entry.entry_id
@@ -119,8 +127,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     ) -> FlowResult:
         """Create a hass-to-bemfa sync."""
         if user_input is not None:
-            self._sync = self._sync_dict[user_input[OPTIONS_SELECT]]
-            return await self._async_step_sync_config()
+            self._scope = user_input[OPTIONS_SELECT]
+            return await self.async_step_create_sync_entity()
 
         service = self._get_service()
         all_topics = await service.async_fetch_all_topics()
@@ -135,8 +143,45 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
         self._is_create = True
 
+        return self._async_show_scope_form("create_sync")
+
+    async def async_step_create_sync_entity(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Select an entity to create a hass-to-bemfa sync."""
+        if user_input is not None:
+            self._sync = self._sync_dict[user_input[OPTIONS_SELECT]]
+            return await self._async_step_sync_config()
+
+        return self._async_show_sync_form("create_sync_entity")
+
+    def _async_show_scope_form(self, step_id: str) -> FlowResult:
+        options = self._generate_scope_options()
+        if not bool(options):
+            return self.async_show_form(step_id="empty", last_step=False)
+
         return self.async_show_form(
-            step_id="create_sync",
+            step_id=step_id,
+            data_schema=vol.Schema(
+                {
+                    vol.Required(OPTIONS_SELECT): SelectSelector(
+                        SelectSelectorConfig(
+                            options=options,
+                            mode=SelectSelectorMode.DROPDOWN,
+                        )
+                    )
+                }
+            ),
+            last_step=False,
+        )
+
+    def _async_show_sync_form(self, step_id: str) -> FlowResult:
+        syncs = self._filter_syncs_by_scope(self._scope)
+        if not bool(syncs):
+            return self.async_show_form(step_id="empty", last_step=False)
+
+        return self.async_show_form(
+            step_id=step_id,
             data_schema=vol.Schema(
                 {
                     vol.Required(OPTIONS_SELECT): SelectSelector(
@@ -146,9 +191,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                                     value=sync.entity_id,
                                     label=sync.generate_option_label(),
                                 )
-                                for sync in self._sync_dict.values()
+                                for sync in syncs
                             ],
-                            mode=SelectSelectorMode.LIST,
+                            mode=SelectSelectorMode.DROPDOWN,
                         )
                     )
                 }
@@ -161,8 +206,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     ) -> FlowResult:
         """Modify a hass-to-bemfa sync."""
         if user_input is not None:
-            self._sync = self._sync_dict[user_input[OPTIONS_SELECT]]
-            return await self._async_step_sync_config()
+            self._scope = user_input[OPTIONS_SELECT]
+            return await self.async_step_modify_sync_entity()
 
         service = self._get_service()
         all_topics = await service.async_fetch_all_topics()
@@ -178,26 +223,116 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
         self._is_create = False
 
-        return self.async_show_form(
-            step_id="modify_sync",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(OPTIONS_SELECT): SelectSelector(
-                        SelectSelectorConfig(
-                            options=[
-                                SelectOptionDict(
-                                    value=sync.entity_id,
-                                    label=sync.generate_option_label(),
-                                )
-                                for sync in self._sync_dict.values()
-                            ],
-                            mode=SelectSelectorMode.LIST,
-                        )
-                    )
-                }
-            ),
-            last_step=False,
+        return self._async_show_scope_form("modify_sync")
+
+    async def async_step_modify_sync_entity(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Select a sync to modify."""
+        if user_input is not None:
+            self._sync = self._sync_dict[user_input[OPTIONS_SELECT]]
+            return await self._async_step_sync_config()
+
+        return self._async_show_sync_form("modify_sync_entity")
+
+    def _generate_scope_options(self) -> list[SelectOptionDict]:
+        area_reg = area_registry.async_get(self.hass)
+        device_reg = device_registry.async_get(self.hass)
+        areas: dict[str, int] = {}
+        devices: dict[str, int] = {}
+
+        for sync in self._sync_dict.values():
+            scope = self._get_sync_scope(sync)
+            if scope["device_id"] is not None:
+                devices[scope["device_id"]] = devices.get(scope["device_id"], 0) + 1
+            if scope["area_id"] is not None:
+                areas[scope["area_id"]] = areas.get(scope["area_id"], 0) + 1
+
+        options = [
+            SelectOptionDict(
+                value=f"{OPTIONS_SCOPE_DEVICE_PREFIX}{device_id}",
+                label="[设备] {name} ({count})".format(
+                    name=self._get_device_name(device_reg.async_get(device_id)),
+                    count=count,
+                ),
+            )
+            for device_id, count in devices.items()
+        ]
+        options.sort(key=lambda option: option["label"])
+
+        area_options = [
+            SelectOptionDict(
+                value=f"{OPTIONS_SCOPE_AREA_PREFIX}{area_id}",
+                label="[区域] {name} ({count})".format(
+                    name=area_reg.async_get_area(area_id).name,
+                    count=count,
+                ),
+            )
+            for area_id, count in areas.items()
+            if area_reg.async_get_area(area_id) is not None
+        ]
+        area_options.sort(key=lambda option: option["label"])
+        options.extend(area_options)
+
+        options.append(
+            SelectOptionDict(
+                value=OPTIONS_SCOPE_ALL,
+                label="[全部] 显示所有可选项 ({count})".format(
+                    count=len(self._sync_dict),
+                ),
+            )
         )
+
+        return options
+
+    def _filter_syncs_by_scope(self, scope: str) -> list[Sync]:
+        if scope == OPTIONS_SCOPE_ALL:
+            return list(self._sync_dict.values())
+
+        filtered_syncs: list[Sync] = []
+        for sync in self._sync_dict.values():
+            sync_scope = self._get_sync_scope(sync)
+            if scope.startswith(OPTIONS_SCOPE_DEVICE_PREFIX):
+                device_id = scope.removeprefix(OPTIONS_SCOPE_DEVICE_PREFIX)
+                if sync_scope["device_id"] == device_id:
+                    filtered_syncs.append(sync)
+            elif scope.startswith(OPTIONS_SCOPE_AREA_PREFIX):
+                area_id = scope.removeprefix(OPTIONS_SCOPE_AREA_PREFIX)
+                if sync_scope["area_id"] == area_id:
+                    filtered_syncs.append(sync)
+        return filtered_syncs
+
+    def _get_sync_scope(self, sync: Sync) -> dict[str, str | None]:
+        if sync.entity_id.startswith("area."):
+            return {
+                "area_id": sync.entity_id.split(".", 1)[1],
+                "device_id": None,
+            }
+
+        entity_reg = entity_registry.async_get(self.hass)
+        device_reg = device_registry.async_get(self.hass)
+        entity = entity_reg.async_get(sync.entity_id)
+        if entity is None:
+            return {
+                "area_id": None,
+                "device_id": None,
+            }
+
+        area_id = entity.area_id
+        if area_id is None and entity.device_id is not None:
+            device = device_reg.async_get(entity.device_id)
+            if device is not None:
+                area_id = device.area_id
+
+        return {
+            "area_id": area_id,
+            "device_id": entity.device_id,
+        }
+
+    def _get_device_name(self, device) -> str:
+        if device is None:
+            return "未知设备"
+        return device.name_by_user or device.name or device.model or device.id
 
     async def _async_step_sync_config(self) -> FlowResult:
         """Set details of a hass-to-bemfa sync."""
