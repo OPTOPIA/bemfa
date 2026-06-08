@@ -34,7 +34,7 @@
             },
             "create_sync_entity": {
                 "title": "Create sync",
-                "description": "Select an entity to create sync.",
+                "description": "Current scope: {scope}\nSelect an entity to create sync.",
                 "data": {
                     "select": "Entity"
                 }
@@ -48,7 +48,7 @@
             },
             "modify_sync_entity": {
                 "title": "Modify a sync",
-                "description": "Select a sync to edit.",
+                "description": "Current scope: {scope}\nSelect a sync to edit.",
                 "data": {
                     "select": "Sync"
                 }

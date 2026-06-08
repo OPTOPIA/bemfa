@@ -32,7 +32,6 @@ _LOGGER = logging.getLogger(__name__)
 OPTIONS_SCOPE_ALL = "all"
 OPTIONS_SCOPE_AREA_PREFIX = "area:"
 OPTIONS_SCOPE_DEVICE_PREFIX = "device:"
-OPTIONS_BACK = "__back__"
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
@@ -151,8 +150,6 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     ) -> FlowResult:
         """Select an entity to create a hass-to-bemfa sync."""
         if user_input is not None:
-            if user_input[OPTIONS_SELECT] == OPTIONS_BACK:
-                return self._async_show_scope_form("create_sync")
             self._sync = self._sync_dict[user_input[OPTIONS_SELECT]]
             return await self._async_step_sync_config()
 
@@ -183,34 +180,27 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         if not bool(syncs):
             return self.async_show_form(step_id="empty", last_step=False)
 
-        entity_options = [
-            SelectOptionDict(
-                value=OPTIONS_BACK,
-                label="↩ 返回上一步",
-            )
-        ]
-        entity_options.extend(
-            [
-                SelectOptionDict(
-                    value=sync.entity_id,
-                    label=sync.generate_option_label(),
-                )
-                for sync in syncs
-            ]
-        )
-
         return self.async_show_form(
             step_id=step_id,
             data_schema=vol.Schema(
                 {
                     vol.Required(OPTIONS_SELECT): SelectSelector(
                         SelectSelectorConfig(
-                            options=entity_options,
+                            options=[
+                                SelectOptionDict(
+                                    value=sync.entity_id,
+                                    label=sync.generate_option_label(),
+                                )
+                                for sync in syncs
+                            ],
                             mode=SelectSelectorMode.DROPDOWN,
                         )
                     )
                 }
             ),
+            description_placeholders={
+                "scope": self._get_scope_label(self._scope),
+            },
             last_step=False,
         )
 
@@ -243,8 +233,6 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     ) -> FlowResult:
         """Select a sync to modify."""
         if user_input is not None:
-            if user_input[OPTIONS_SELECT] == OPTIONS_BACK:
-                return self._async_show_scope_form("modify_sync")
             self._sync = self._sync_dict[user_input[OPTIONS_SELECT]]
             return await self._async_step_sync_config()
 
@@ -299,6 +287,26 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         )
 
         return options
+
+    def _get_scope_label(self, scope: str) -> str:
+        if scope == OPTIONS_SCOPE_ALL:
+            return "全部设备和区域"
+
+        area_reg = area_registry.async_get(self.hass)
+        device_reg = device_registry.async_get(self.hass)
+
+        if scope.startswith(OPTIONS_SCOPE_DEVICE_PREFIX):
+            device_id = scope.removeprefix(OPTIONS_SCOPE_DEVICE_PREFIX)
+            device = device_reg.async_get(device_id)
+            return "设备：{name}".format(name=self._get_device_name(device))
+
+        if scope.startswith(OPTIONS_SCOPE_AREA_PREFIX):
+            area_id = scope.removeprefix(OPTIONS_SCOPE_AREA_PREFIX)
+            area = area_reg.async_get_area(area_id)
+            if area is not None:
+                return "区域：{name}".format(name=area.name)
+
+        return scope
 
     def _filter_syncs_by_scope(self, scope: str) -> list[Sync]:
         if scope == OPTIONS_SCOPE_ALL:
