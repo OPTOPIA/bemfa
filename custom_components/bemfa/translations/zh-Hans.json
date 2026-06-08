@@ -27,29 +27,17 @@
             },
             "create_sync": {
                 "title": "\u540c\u6b65\u5b9e\u4f53",
-                "description": "\u5148\u9009\u62e9\u8bbe\u5907\u6216\u533a\u57df\uff0c\u518d\u4ece\u5176\u4e2d\u9009\u62e9\u8981\u540c\u6b65\u7684\u5b9e\u4f53\u3002",
+                "description": "\u5f53\u524d\u8303\u56f4\uff1a{scope}\n\u4e0a\u65b9\u53ef\u9009\u62e9\u8bbe\u5907\u6216\u533a\u57df\u4f5c\u4e3a\u7b5b\u9009\u6761\u4ef6\uff0c\u4e0b\u65b9\u9009\u62e9\u8981\u540c\u6b65\u7684\u5b9e\u4f53\u3002\u5982\u679c\u5207\u6362\u4e86\u8303\u56f4\uff0c\u70b9\u51fb\u4e00\u6b21\u201c\u4e0b\u4e00\u6b65\u201d\u5373\u53ef\u5237\u65b0\u5b9e\u4f53\u5217\u8868\u3002",
                 "data": {
-                    "select": "\u67e5\u627e\u8303\u56f4"
-                }
-            },
-            "create_sync_entity": {
-                "title": "\u540c\u6b65\u5b9e\u4f53",
-                "description": "\u5f53\u524d\u8303\u56f4\uff1a{scope}\n\u9009\u62e9\u4e00\u4e2a\u5b9e\u4f53\u540c\u6b65\u81f3\u5df4\u6cd5\u4e91\u3002",
-                "data": {
+                    "scope": "\u8bbe\u5907/\u533a\u57df\uff08\u53ef\u9009\uff09",
                     "select": "\u5b9e\u4f53"
                 }
             },
             "modify_sync": {
                 "title": "\u7f16\u8f91\u540c\u6b65",
-                "description": "\u5148\u9009\u62e9\u8bbe\u5907\u6216\u533a\u57df\uff0c\u518d\u4ece\u5176\u4e2d\u9009\u62e9\u8981\u7f16\u8f91\u7684\u540c\u6b65\u3002",
+                "description": "\u5f53\u524d\u8303\u56f4\uff1a{scope}\n\u4e0a\u65b9\u53ef\u9009\u62e9\u8bbe\u5907\u6216\u533a\u57df\u4f5c\u4e3a\u7b5b\u9009\u6761\u4ef6\uff0c\u4e0b\u65b9\u9009\u62e9\u8981\u7f16\u8f91\u7684\u540c\u6b65\u3002\u5982\u679c\u5207\u6362\u4e86\u8303\u56f4\uff0c\u70b9\u51fb\u4e00\u6b21\u201c\u4e0b\u4e00\u6b65\u201d\u5373\u53ef\u5237\u65b0\u5217\u8868\u3002",
                 "data": {
-                    "select": "\u67e5\u627e\u8303\u56f4"
-                }
-            },
-            "modify_sync_entity": {
-                "title": "\u7f16\u8f91\u540c\u6b65",
-                "description": "\u5f53\u524d\u8303\u56f4\uff1a{scope}\n\u9009\u62e9\u4e00\u4e2a\u540c\u6b65\u8fdb\u884c\u7f16\u8f91\u3002",
-                "data": {
+                    "scope": "\u8bbe\u5907/\u533a\u57df\uff08\u53ef\u9009\uff09",
                     "select": "\u540c\u6b65"
                 }
             },

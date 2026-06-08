@@ -27,29 +27,17 @@
             },
             "create_sync": {
                 "title": "Create sync",
-                "description": "Select a device or area first, then select the entity to sync.",
+                "description": "Current scope: {scope}\nOptionally choose a device or area as a filter, then select the entity to sync. If you change the scope, click \"Next\" once to refresh the entity list.",
                 "data": {
-                    "select": "Search scope"
-                }
-            },
-            "create_sync_entity": {
-                "title": "Create sync",
-                "description": "Current scope: {scope}\nSelect an entity to create sync.",
-                "data": {
+                    "scope": "Device/area (optional)",
                     "select": "Entity"
                 }
             },
             "modify_sync": {
                 "title": "Modify a sync",
-                "description": "Select a device or area first, then select the sync to edit.",
+                "description": "Current scope: {scope}\nOptionally choose a device or area as a filter, then select the sync to edit. If you change the scope, click \"Next\" once to refresh the list.",
                 "data": {
-                    "select": "Search scope"
-                }
-            },
-            "modify_sync_entity": {
-                "title": "Modify a sync",
-                "description": "Current scope: {scope}\nSelect a sync to edit.",
-                "data": {
+                    "scope": "Device/area (optional)",
                     "select": "Sync"
                 }
             },

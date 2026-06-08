@@ -32,6 +32,7 @@ _LOGGER = logging.getLogger(__name__)
 OPTIONS_SCOPE_ALL = "all"
 OPTIONS_SCOPE_AREA_PREFIX = "area:"
 OPTIONS_SCOPE_DEVICE_PREFIX = "device:"
+OPTIONS_SCOPE = "scope"
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
@@ -127,8 +128,21 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     ) -> FlowResult:
         """Create a hass-to-bemfa sync."""
         if user_input is not None:
-            self._scope = user_input[OPTIONS_SELECT]
-            return await self.async_step_create_sync_entity()
+            requested_scope = user_input.get(OPTIONS_SCOPE, OPTIONS_SCOPE_ALL)
+            selected_entity = user_input.get(OPTIONS_SELECT)
+
+            # The entity dropdown was rendered using the previous scope. If the
+            # user changed the scope in this submit, refresh the same form first.
+            if requested_scope != self._scope:
+                self._scope = requested_scope
+                return self._async_show_sync_form("create_sync")
+
+            if selected_entity is None:
+                self._scope = requested_scope
+                return self._async_show_sync_form("create_sync")
+
+            self._sync = self._sync_dict[selected_entity]
+            return await self._async_step_sync_config()
 
         service = self._get_service()
         all_topics = await service.async_fetch_all_topics()
@@ -142,38 +156,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             return self.async_show_form(step_id="empty", last_step=False)
 
         self._is_create = True
+        self._scope = OPTIONS_SCOPE_ALL
 
-        return self._async_show_scope_form("create_sync")
-
-    async def async_step_create_sync_entity(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """Select an entity to create a hass-to-bemfa sync."""
-        if user_input is not None:
-            self._sync = self._sync_dict[user_input[OPTIONS_SELECT]]
-            return await self._async_step_sync_config()
-
-        return self._async_show_sync_form("create_sync_entity")
-
-    def _async_show_scope_form(self, step_id: str) -> FlowResult:
-        options = self._generate_scope_options()
-        if not bool(options):
-            return self.async_show_form(step_id="empty", last_step=False)
-
-        return self.async_show_form(
-            step_id=step_id,
-            data_schema=vol.Schema(
-                {
-                    vol.Required(OPTIONS_SELECT): SelectSelector(
-                        SelectSelectorConfig(
-                            options=options,
-                            mode=SelectSelectorMode.DROPDOWN,
-                        )
-                    )
-                }
-            ),
-            last_step=False,
-        )
+        return self._async_show_sync_form("create_sync")
 
     def _async_show_sync_form(self, step_id: str) -> FlowResult:
         syncs = self._filter_syncs_by_scope(self._scope)
@@ -184,6 +169,15 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             step_id=step_id,
             data_schema=vol.Schema(
                 {
+                    vol.Optional(
+                        OPTIONS_SCOPE,
+                        description={"suggested_value": self._scope},
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=self._generate_scope_options(),
+                            mode=SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
                     vol.Required(OPTIONS_SELECT): SelectSelector(
                         SelectSelectorConfig(
                             options=[
@@ -209,8 +203,19 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     ) -> FlowResult:
         """Modify a hass-to-bemfa sync."""
         if user_input is not None:
-            self._scope = user_input[OPTIONS_SELECT]
-            return await self.async_step_modify_sync_entity()
+            requested_scope = user_input.get(OPTIONS_SCOPE, OPTIONS_SCOPE_ALL)
+            selected_entity = user_input.get(OPTIONS_SELECT)
+
+            if requested_scope != self._scope:
+                self._scope = requested_scope
+                return self._async_show_sync_form("modify_sync")
+
+            if selected_entity is None:
+                self._scope = requested_scope
+                return self._async_show_sync_form("modify_sync")
+
+            self._sync = self._sync_dict[selected_entity]
+            return await self._async_step_sync_config()
 
         service = self._get_service()
         all_topics = await service.async_fetch_all_topics()
@@ -225,18 +230,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             return self.async_show_form(step_id="empty", last_step=False)
 
         self._is_create = False
+        self._scope = OPTIONS_SCOPE_ALL
 
-        return self._async_show_scope_form("modify_sync")
-
-    async def async_step_modify_sync_entity(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """Select a sync to modify."""
-        if user_input is not None:
-            self._sync = self._sync_dict[user_input[OPTIONS_SELECT]]
-            return await self._async_step_sync_config()
-
-        return self._async_show_sync_form("modify_sync_entity")
+        return self._async_show_sync_form("modify_sync")
 
     def _generate_scope_options(self) -> list[SelectOptionDict]:
         area_reg = area_registry.async_get(self.hass)
